@@ -18,7 +18,7 @@ package main
 import (
 	"html/template"
 	"log"
-    "os"
+	"os"
 
 	"github.com/Vlad-x-cypher/go-asset-mapper"
 )
@@ -28,13 +28,13 @@ func main() {
 
 	assetMapper := asset.NewAssetMapper()
 
-    // Scan specific directory to map all files
+	// Scan specific directory to map all files
 	err := assetMapper.ScanDir("assets")
 	if err != nil {
 		log.Fatalf("assets scandir err: %v", err)
 	}
 
-    // Add functions to use inside templates
+	// Add functions to use inside templates
 	t.Funcs(template.FuncMap{
 		"scriptTag": assetMapper.ScriptTag,
 		"linkTag":   assetMapper.LinkTag,
@@ -46,11 +46,11 @@ func main() {
 <html>
 	<head>
 		<meta charset="UTF-8">
-        {{ linkTag "assets/style.css" }}
-        {{ scriptTag "assets/main.js" }}
+		{{ linkTag "assets/style.css" }}
+		{{ scriptTag "assets/main.js" }}
 	</head>
 	<body>
-        <img src="{{ asset "assets/example.png" }}" />
+		<img src="{{ asset "assets/example.png" }}" />
 	</body>
 </html>`
 
@@ -71,14 +71,13 @@ Output:
 <html>
 	<head>
 		<meta charset="UTF-8">
-        <link href="assets/style.css" rel="stylesheet"/>
-        <script src="assets/main.js"></script>
+		<link href="assets/style.css" rel="stylesheet"/>
+		<script src="assets/main.js"></script>
 	</head>
 	<body>
-        <img src="assets/example.png" />
+		<img src="assets/example.png" />
 	</body>
 </html>
 ```
 
 For more complete example see [example dir](./example)
-
