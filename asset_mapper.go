@@ -18,7 +18,7 @@ import (
 var (
 	cssRe   = regexp.MustCompile(`\.css$`)
 	jsRe    = regexp.MustCompile(`\.js$`)
-	imageRe = regexp.MustCompile(`(\.webp|\.jpg|\.jpeg|\.jpe|\.jfif|\.jif|\.png|\.gif|\.tiff|\.tif|\.svg)$`)
+	imageRe = regexp.MustCompile(`(\.webp|\.jpg|\.jpeg|\.jpe|\.jfif|\.jif|\.png|\.gif|\.tiff|\.tif|\.svg|\.avif)$`)
 )
 
 type AssetMapper struct {
@@ -224,4 +224,3 @@ func (a *AssetMapper) LinkTag(path string, attrs ...string) (template.HTML, erro
 
 	return template.HTML(fmt.Sprintf("<link %s />", attributeMapToString(attrMap))), nil
 }
-
