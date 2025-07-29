@@ -1,0 +1,30 @@
+{{ define "home" }}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+
+    <!-- Example how to use linkTag to preload, prefetch -->
+    {{ linkTag "assets/css/style.css" "rel" "preload" "as" "style" }}
+    {{ linkTag "assets/js/app.js" "rel" "modulepreload" }}
+
+    {{ linkTag "assets/css/style.css" }}
+    <script type="importmap">
+        {
+            "imports": {
+                "app": "{{ asset "/assets/js/app.js" }}"
+            }
+        }
+    </script>
+    <script type="module">
+        import 'app';
+    </script>
+    {{ scriptTag "assets/js/main.js" "defer" "" }}
+</head>
+<body>
+    <div id="app" class="app"></div> 
+</body>
+</html>
+{{ end }}
