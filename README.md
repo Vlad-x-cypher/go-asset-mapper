@@ -54,10 +54,10 @@ func main() {
 	</body>
 </html>`
 
-	templates, err := t.Parse(tpl)
-	if err != nil {
-		log.Fatal(err)
-	}
+    templates, err := t.Parse(tpl)
+    if err != nil {
+        log.Fatal(err)
+    }
 
     err = templates.Execute(os.Stdout, nil)
     if err != nil {
