@@ -124,12 +124,12 @@ func main() {
 
 	assetMapper := asset.NewAssetMapper()
 
-    // Parse manifest.json 
+    	// Parse manifest.json 
 	err := assetMapper.UseManifest(&asset.ManifestConfig{
-        Path: "assets/.vite/manifest.json",
-        // Set correct type
+        	Path: "assets/.vite/manifest.json",
+        	// Set correct type
 		Type: asset.ViteManifestType,
-    })
+    	})
 	if err != nil {
 		log.Fatalf("assets vite manifest err: %v", err)
 	}
