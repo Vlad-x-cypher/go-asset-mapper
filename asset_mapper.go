@@ -11,46 +11,83 @@ import (
 	"html/template"
 	"io/fs"
 	"path/filepath"
-	"regexp"
 	"strings"
 )
 
-var (
-	cssRe   = regexp.MustCompile(`\.css$`)
-	jsRe    = regexp.MustCompile(`\.js$`)
-	imageRe = regexp.MustCompile(`(\.webp|\.jpg|\.jpeg|\.jpe|\.jfif|\.jif|\.png|\.gif|\.tiff|\.tif|\.svg|\.avif)$`)
-)
+type AssetMapperEntry struct {
+	CSS []string
+	JS  []string
+}
 
 type AssetMapper struct {
-	JSAssets    map[string]*Asset
-	CSSAssets   map[string]*Asset
-	ImageAssets map[string]*Asset
-	OtherAssets map[string]*Asset
-	PublicPath  string
-	HashLen     int
+	PublicPath string
+	Assets     map[string]*Asset
+	Entries    map[string]*AssetMapperEntry
+	HashLen    int
 }
 
 func NewAssetMapper() *AssetMapper {
 	return &AssetMapper{
-		JSAssets:    map[string]*Asset{},
-		CSSAssets:   map[string]*Asset{},
-		ImageAssets: map[string]*Asset{},
-		OtherAssets: map[string]*Asset{},
-		PublicPath:  "/",
-		HashLen:     10,
+		Assets:     map[string]*Asset{},
+		PublicPath: "/",
+		HashLen:    10,
+		Entries:    map[string]*AssetMapperEntry{},
 	}
 }
 
-func isCSS(path string) bool {
-	return cssRe.MatchString(path)
+// UseManifest loads all assets from provided manifest config.
+// For more information look [ManifestConfig]
+//
+// Example:
+//
+//	assetMapper.UseManifest(&asset.ManifestConfig{
+//		Path: "assets/manifest.json",
+//		Type: asset.ViteManifestType,
+//	})
+func (a *AssetMapper) UseManifest(config ManifestConfig) error {
+	switch config.Type {
+	case ViteManifestType:
+		return parseViteManifest(config.Path, a)
+	case WebpackManifestType:
+		return parseWebpackManifest(config.Path, a)
+	}
+	return errors.New("undefined manifest type")
 }
 
-func isJS(path string) bool {
-	return jsRe.MatchString(path)
+// CreateEntry creates AssetsMapperEntry if not exists and returns pointer to that entry.
+func (a *AssetMapper) CreateEntry(name string) *AssetMapperEntry {
+	if e, ok := a.Entries[name]; ok {
+		return e
+	}
+
+	a.Entries[name] = &AssetMapperEntry{
+		CSS: []string{},
+		JS:  []string{},
+	}
+
+	return a.Entries[name]
 }
 
-func isImage(path string) bool {
-	return imageRe.MatchString(path)
+func (entry *AssetMapperEntry) Add(path string) {
+	switch {
+	case isCSS(path):
+		entry.CSS = append(entry.CSS, path)
+	case isJS(path):
+		entry.JS = append(entry.JS, path)
+	}
+}
+
+// AddAsset adds asset to list. If renew is set to true, existing asset will be
+// replaced by provided one.
+func (a *AssetMapper) AddAsset(asset *Asset, renew bool) {
+	if !renew {
+		if _, ok := a.Assets[asset.Path]; ok {
+			return
+		}
+	}
+
+	a.Assets[asset.Path] = asset
+	a.Assets[asset.PublicPath] = asset
 }
 
 // ScanDir walks directory and maps all files to AssetMapper, storing its path and hash.
@@ -59,25 +96,13 @@ func (a *AssetMapper) ScanDir(dirName string) error {
 		if info.IsDir() {
 			return nil
 		}
-		asset, assetErr := NewAsset(path, a.HashLen)
+
+		asset, assetErr := NewAsset(path, a.PublicPath, a.HashLen)
 		if assetErr != nil {
 			return assetErr
 		}
 
-		switch {
-		case isCSS(path):
-			a.CSSAssets[path] = asset
-			a.CSSAssets[a.PublicPath+path] = asset
-		case isJS(path):
-			a.JSAssets[path] = asset
-			a.JSAssets[a.PublicPath+path] = asset
-		case isImage(path):
-			a.ImageAssets[path] = asset
-			a.ImageAssets[a.PublicPath+path] = asset
-		default:
-			a.OtherAssets[path] = asset
-			a.OtherAssets[a.PublicPath+path] = asset
-		}
+		a.AddAsset(asset, false)
 
 		return nil
 	})
@@ -85,49 +110,17 @@ func (a *AssetMapper) ScanDir(dirName string) error {
 	return err
 }
 
-func (a *AssetMapper) extractAssetPathFromMap(m map[string]*Asset, search string) string {
+func extractAssetPathFromMap(m map[string]*Asset, search string) string {
+	search = strings.TrimLeft(search, "/")
 	if asset, ok := m[search]; ok {
-		path := asset.Path
-		if !strings.HasPrefix(path, a.PublicPath) {
-			path = a.PublicPath + path
-		}
-		return path + "?v=" + asset.Hash
+		return asset.PublicPath
 	}
 	return search
 }
 
-// CSSLink returns versioned css path. If asset not found returns raw path.
-func (a *AssetMapper) CSSLink(path string) string {
-	return a.extractAssetPathFromMap(a.CSSAssets, path)
-}
-
-// JSLink returns versioned javascript path. If asset not found returns raw path.
-func (a *AssetMapper) JSLink(path string) string {
-	return a.extractAssetPathFromMap(a.JSAssets, path)
-}
-
-// ImageLink returns versioned image path. If asset not found returns raw path.
-func (a *AssetMapper) ImageLink(path string) string {
-	return a.extractAssetPathFromMap(a.ImageAssets, path)
-}
-
-// OtherLink returns versioned file path. If asset not found returns raw path.
-func (a *AssetMapper) OtherLink(path string) string {
-	return a.extractAssetPathFromMap(a.OtherAssets, path)
-}
-
 // Get returns asset url including version. If asset not found returns path param as is.
 func (a *AssetMapper) Get(path string) string {
-	switch {
-	case isCSS(path):
-		return a.CSSLink(path)
-	case isJS(path):
-		return a.JSLink(path)
-	case isImage(path):
-		return a.ImageLink(path)
-	}
-
-	return a.OtherLink(path)
+	return extractAssetPathFromMap(a.Assets, path)
 }
 
 func attributeMapToString(m map[string]string) string {
@@ -158,6 +151,10 @@ func tagAttributes(attrs []string) (map[string]string, error) {
 	return attrMap, nil
 }
 
+func scriptTag(attrs string) template.HTML {
+	return template.HTML(fmt.Sprintf("<script %s></script>", attrs))
+}
+
 // ScriptTag returns HTML script tag
 // attrs param can be used to pass additional attributes to the tag. Unfortunately Go html.Template
 // does not allow create new maps inside html templates, attrs must be an even number of strings
@@ -165,25 +162,27 @@ func tagAttributes(attrs []string) (map[string]string, error) {
 //
 // Example usage in template:
 //
-// <head>
-//
 //	{{ scriptTag "main.js" }}
 //
 //	<!-- Passing additional attributes to script tag -->
 //	{{ scriptTag "other.js" "type" "module" "id" "other-script" }}
-//	<!-- Should render: <script src="other.js" type="module" id="other-script"></script> -->
 //
 //	<!-- Example set defer or async attributes -->
 //	{{ scriptTag "defered.js" "defer" "" }}
-//		<!-- Produces: <script defer src="defered.js"></script> -->
 //	{{ scriptTag "some-async.js" "async" "" }}
-//		<!-- Produces: <script async src="some-async.js"></script> -->
 //
-// </head>
+// Result:
 //
-// For more complete examples follow example dir.
+//	<script src="main.js"></script>
+//
+//	<!-- Passing additional attributes to script tag -->
+//	<script src="other.js" type="module" id="other-script"></script>
+//
+//	<!-- Example set defer or async attributes -->
+//	<script defer src="defered.js"></script>
+//	<script async src="some-async.js"></script>
 func (a *AssetMapper) ScriptTag(path string, attrs ...string) (template.HTML, error) {
-	link := a.JSLink(path)
+	link := a.Get(path)
 
 	attrMap, err := tagAttributes(attrs)
 	if err != nil {
@@ -192,7 +191,11 @@ func (a *AssetMapper) ScriptTag(path string, attrs ...string) (template.HTML, er
 
 	attrMap["src"] = link
 
-	return template.HTML(fmt.Sprintf("<script %s></script>", attributeMapToString(attrMap))), nil
+	return scriptTag(attributeMapToString(attrMap)), nil
+}
+
+func linkTag(attrs string) template.HTML {
+	return template.HTML(fmt.Sprintf("<link %s/>", attrs))
 }
 
 // LinkTag returns HTML link tag
@@ -202,15 +205,16 @@ func (a *AssetMapper) ScriptTag(path string, attrs ...string) (template.HTML, er
 //
 // Example usage in template:
 //
-// <head>
-//
 //	{{ linkTag "style.css" }}
 //
 //	<!-- Passing additional attributes to link tag -->
 //	{{ linkTag "homepage.css" "id" "homepage-css" "media" "screen" }}
-//	<!-- Should render: <link href="homepage.css" id="homepage-css" media="screen" /> -->
 //
-// </head>
+// Result:
+//
+//	<link href="style.css" rel="stylesheet"/>
+//	<!-- Passing additional attributes to link tag -->
+//	<link href="homepage.css" rel="stylesheet" id="homepage-css" media="screen"/>
 func (a *AssetMapper) LinkTag(path string, attrs ...string) (template.HTML, error) {
 	link := a.Get(path)
 
@@ -222,5 +226,58 @@ func (a *AssetMapper) LinkTag(path string, attrs ...string) (template.HTML, erro
 
 	attrMap["href"] = link
 
-	return template.HTML(fmt.Sprintf("<link %s />", attributeMapToString(attrMap))), nil
+	return linkTag(attributeMapToString(attrMap)), nil
+}
+
+// CSSEntry returns slice of css urls from entrypoint
+func (a *AssetMapper) CSSEntry(name string) []string {
+	if s, ok := a.Entries[name]; ok {
+		return s.CSS
+	}
+	return nil
+}
+
+// JSEntry returns slice of js urls from entrypoint
+func (a *AssetMapper) JSEntry(name string) []string {
+	if s, ok := a.Entries[name]; ok {
+		return s.JS
+	}
+	return nil
+}
+
+// CSSLinkTagsFromEntry return slice of html links from entry.
+//
+// For more information look [AssetMapper.LinkTag] method
+func (a *AssetMapper) CSSLinkTagsFromEntry(name string, attrs ...string) ([]template.HTML, error) {
+	attrs = append([]string{"rel", "stylesheet"}, attrs...)
+	attrMap, err := tagAttributes(attrs)
+	if err != nil {
+		return nil, err
+	}
+
+	result := []template.HTML{}
+	for _, css := range a.CSSEntry(name) {
+		attrMap["href"] = css
+		result = append(result, linkTag(attributeMapToString(attrMap)))
+	}
+
+	return result, nil
+}
+
+// JSScriptTagsFromEntry return slice of html scripts from entry.
+//
+// For more information look [AssetMapper.ScriptTag] method
+func (a *AssetMapper) JSScriptTagsFromEntry(name string, attrs ...string) ([]template.HTML, error) {
+	attrMap, err := tagAttributes(attrs)
+	if err != nil {
+		return nil, err
+	}
+
+	result := []template.HTML{}
+	for _, js := range a.JSEntry(name) {
+		attrMap["src"] = js
+		result = append(result, scriptTag(attributeMapToString(attrMap)))
+	}
+
+	return result, nil
 }

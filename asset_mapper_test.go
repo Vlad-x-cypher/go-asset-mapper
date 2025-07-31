@@ -4,9 +4,10 @@ import "testing"
 
 func TestAssetMapperGet(t *testing.T) {
 	a := NewAssetMapper()
-	a.CSSAssets["test.css"] = &Asset{
-		Path: "test.css",
-		Hash: "123",
+	a.Assets["test.css"] = &Asset{
+		Path:       "test.css",
+		Hash:       "123",
+		PublicPath: "/test.css?v=123",
 	}
 
 	result := a.Get("test.css")

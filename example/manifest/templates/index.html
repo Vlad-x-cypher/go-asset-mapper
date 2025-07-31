@@ -1,0 +1,29 @@
+{{define "index"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <!-- Example entries from vite manifest  -->
+    {{ range (entryCssLinks "app") }}
+        {{ . }}
+    {{ end }}
+    {{ range (entryJsScripts "app" "defer" "") }}
+        {{ . }}
+    {{ end }}
+
+    <!-- Example resource from webpack manifest  -->
+    {{ linkTag "bundle.css" }}
+    {{ scriptTag "runtime.js" }}
+    {{ scriptTag "bundle.js" }}
+</head>
+<body>
+    <div class="pt-4 text-center">
+        <h1 class="text-xl mb-8">Hello world !</h1>
+
+        <img class="inline-block" src="{{ asset "src/placeholder.jpeg" }}" width="600" height="400" alt="placeholder">
+    </div> 
+</body>
+</html>
+{{end}}

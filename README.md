@@ -80,4 +80,4 @@ Output:
 </html>
 ```
 
-For more complete example see [example dir](./example)
+For more complete examples see [example dir](./example)

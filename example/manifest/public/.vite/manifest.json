@@ -1,0 +1,15 @@
+{
+  "src/app.js": {
+    "file": "assets/app-CKgRTByK.js",
+    "name": "app",
+    "src": "src/app.js",
+    "isEntry": true,
+    "css": [
+      "assets/app-o2N34dPp.css"
+    ]
+  },
+  "src/placeholder.jpeg": {
+    "file": "assets/placeholder-DXdl7YkJ.jpeg",
+    "src": "src/placeholder.jpeg"
+  }
+}
