@@ -2,7 +2,6 @@
   "name": "example",
   "version": "1.0.0",
   "main": "index.js",
-  "type": "module",
   "scripts": {
     "build": "vite build",
     "build-wp": "webpack build"
