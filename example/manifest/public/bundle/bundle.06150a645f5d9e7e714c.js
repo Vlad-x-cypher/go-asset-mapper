@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunkexample=self.webpackChunkexample||[]).push([[23],{74:()=>{console.log("Hello from bundle")}},e=>{e(e.s=74)}]);

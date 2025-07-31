@@ -80,4 +80,110 @@ Output:
 </html>
 ```
 
+## Map assets from manifest.json
+
+Javascript Build tools (Vite, Webpack) allows to generate `manifest.json` with list of all processed assets. 
+
+`AssetsMapper.UseManifest` method designed to map all assets from manifest.
+
+### Example
+
+example manifest.json:
+```json
+{
+  "src/app.js": {
+    "file": "assets/app-CKgRTByK.js",
+    "name": "app",
+    "src": "src/app.js",
+    "isEntry": true,
+    "css": [
+      "assets/app-o2N34dPp.css"
+    ]
+  },
+  "src/placeholder.jpeg": {
+    "file": "assets/placeholder-DXdl7YkJ.jpeg",
+    "src": "src/placeholder.jpeg"
+  }
+}
+```
+
+```go
+ 
+package main
+
+import (
+	"html/template"
+	"log"
+	"os"
+
+	"github.com/Vlad-x-cypher/go-asset-mapper"
+)
+
+func main() {
+	t := template.New("")
+
+	assetMapper := asset.NewAssetMapper()
+
+    // Parse manifest.json 
+	err := assetMapper.UseManifest(&asset.ManifestConfig{
+        Path: "assets/.vite/manifest.json",
+        // Set correct type
+		Type: asset.ViteManifestType,
+    })
+	if err != nil {
+		log.Fatalf("assets vite manifest err: %v", err)
+	}
+
+	// Add functions to use inside templates
+	t.Funcs(template.FuncMap{
+		"scriptTag": assetMapper.ScriptTag,
+		"linkTag":   assetMapper.LinkTag,
+		"asset":     assetMapper.Get,
+		"entryCssLinks":  assetMapper.CSSLinkTagsFromEntry,
+		"entryJsScripts": assetMapper.JSScriptTagsFromEntry,
+	})
+
+    const tpl = `
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+        {{ range (entryCssLinks "app") }}
+            {{ . }}
+        {{ end }}
+        {{ range (entryJsScripts "app" "defer" "") }}
+            {{ . }}
+        {{ end }}
+	</head>
+	<body>
+		<img src="{{ asset "src/placeholder.jpeg" }}" />
+	</body>
+</html>`
+
+    templates, err := t.Parse(tpl)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    err = templates.Execute(os.Stdout, nil)
+    if err != nil {
+        log.Fatal(err)
+    }
+}
+```
+Output:
+```html
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<link href="assets/app-o2N34dPp.css" rel="stylesheet"/>
+		<script src="assets/app-CKgRTByK.js" defer></script>
+	</head>
+	<body>
+		<img src="assets/placeholder-DXdl7YkJ.jpeg" />
+	</body>
+</html>
+```
+
 For more complete examples see [example dir](./example)
