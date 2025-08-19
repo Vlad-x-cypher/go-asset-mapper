@@ -24,6 +24,8 @@ type AssetMapper struct {
 	Assets     map[string]*Asset
 	Entries    map[string]*AssetMapperEntry
 	HashLen    int
+	// Left trim subsrtring from final path
+	Trim string
 }
 
 func NewAssetMapper() *AssetMapper {
@@ -32,6 +34,7 @@ func NewAssetMapper() *AssetMapper {
 		PublicPath: "/",
 		HashLen:    10,
 		Entries:    map[string]*AssetMapperEntry{},
+		Trim:       "",
 	}
 }
 
@@ -95,6 +98,10 @@ func (a *AssetMapper) ScanDir(dirName string) error {
 	err := filepath.Walk(dirName, func(path string, info fs.FileInfo, err error) error {
 		if info.IsDir() {
 			return nil
+		}
+
+		if a.Trim != "" {
+			path = strings.TrimLeft(path, a.Trim)
 		}
 
 		asset, assetErr := NewAsset(path, a.PublicPath, a.HashLen)
