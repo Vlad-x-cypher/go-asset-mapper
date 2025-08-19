@@ -3,7 +3,6 @@ package asset
 import (
 	"encoding/json"
 	"os"
-	"strings"
 )
 
 type ManifestType int
@@ -89,10 +88,10 @@ func parseWebpackManifest(path string, a *AssetMapper) error {
 			return err
 		}
 
-		for k, v := range data {
+		for k := range data {
 			asset := &Asset{
 				Path:       k,
-				PublicPath: a.PublicPath + strings.TrimLeft(v, "/"),
+				PublicPath: a.PublicPath,
 				Hash:       "",
 			}
 

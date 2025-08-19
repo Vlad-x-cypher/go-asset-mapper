@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"io"
 	"os"
-	"strings"
 )
 
 type Asset struct {
@@ -14,12 +13,7 @@ type Asset struct {
 	Path       string
 }
 
-func NewAsset(path, publicPath string, hashLen int) (*Asset, error) {
-	path = strings.TrimPrefix(path, "/")
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
+func NewAsset(file *os.File, path, publicPath string, hashLen int) (*Asset, error) {
 	defer file.Close()
 
 	hash := ""
@@ -34,15 +28,13 @@ func NewAsset(path, publicPath string, hashLen int) (*Asset, error) {
 
 	hash = hash[0:hashLen]
 
-	pubPath := publicPath + path
-
-	if hashLen > 0 {
-		pubPath += "?v=" + hash
-	}
-
 	return &Asset{
 		Path:       path,
 		Hash:       hash,
-		PublicPath: pubPath,
+		PublicPath: publicPath,
 	}, nil
+}
+
+func (a *Asset) String() string {
+	return a.PublicPath + a.Path + "?v=" + a.Hash
 }

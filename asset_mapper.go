@@ -10,6 +10,7 @@ import (
 	"html"
 	"html/template"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -100,11 +101,17 @@ func (a *AssetMapper) ScanDir(dirName string) error {
 			return nil
 		}
 
-		if a.Trim != "" {
-			path = strings.TrimLeft(path, a.Trim)
+		f, e := os.Open(path)
+
+		if e != nil {
+			return e
 		}
 
-		asset, assetErr := NewAsset(path, a.PublicPath, a.HashLen)
+		if a.Trim != "" {
+			path = strings.TrimPrefix(path, a.Trim)
+		}
+
+		asset, assetErr := NewAsset(f, path, a.PublicPath, a.HashLen)
 		if assetErr != nil {
 			return assetErr
 		}
@@ -120,7 +127,7 @@ func (a *AssetMapper) ScanDir(dirName string) error {
 func extractAssetPathFromMap(m map[string]*Asset, search string) string {
 	search = strings.TrimLeft(search, "/")
 	if asset, ok := m[search]; ok {
-		return asset.PublicPath
+		return asset.String()
 	}
 	return search
 }

@@ -7,7 +7,7 @@ func TestAssetMapperGet(t *testing.T) {
 	a.Assets["test.css"] = &Asset{
 		Path:       "test.css",
 		Hash:       "123",
-		PublicPath: "/test.css?v=123",
+		PublicPath: "/",
 	}
 
 	result := a.Get("test.css")
